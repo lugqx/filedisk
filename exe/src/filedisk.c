@@ -28,8 +28,7 @@
 
 #pragma prefast( disable: 28719, "this warning only applies to drivers not applications" )
 
-int FileDiskSyntax(void)
-{
+int FileDiskSyntax(void) {
     fprintf(stderr, "syntax:\n");
     fprintf(stderr, "filedisk /mount  <devicenumber> <filename> [size[k|M|G] | /ro | /cd] <drive:>\n");
     fprintf(stderr, "filedisk /umount <drive:>\n");
@@ -49,11 +48,10 @@ int FileDiskSyntax(void)
     return -1;
 }
 
-void PrintLastError(char* Prefix)
-{
+void PrintLastError(char* Prefix) {
     LPVOID lpMsgBuf;
 
-    FormatMessage( 
+    FormatMessage(
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
         FORMAT_MESSAGE_FROM_SYSTEM |
         FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -63,7 +61,7 @@ void PrintLastError(char* Prefix)
         (LPTSTR) &lpMsgBuf,
         0,
         NULL
-        );
+    );
 
     fprintf(stderr, "%s %s", Prefix, (LPTSTR) lpMsgBuf);
 
@@ -75,8 +73,7 @@ FileDiskMount(
     int                     DeviceNumber,
     POPEN_FILE_INFORMATION  OpenFileInformation,
     BOOLEAN                 CdImage
-)
-{
+) {
     char    VolumeName[] = "\\\\.\\ :";
     char    DriveName[] = " :\\";
     char    DeviceName[255];
@@ -87,70 +84,63 @@ FileDiskMount(
     DriveName[0] = OpenFileInformation->DriveLetter;
 
     Device = CreateFile(
-        VolumeName,
-        GENERIC_READ | GENERIC_WRITE,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL,
-        OPEN_EXISTING,
-        FILE_FLAG_NO_BUFFERING,
-        NULL
-        );
+                 VolumeName,
+                 GENERIC_READ | GENERIC_WRITE,
+                 FILE_SHARE_READ | FILE_SHARE_WRITE,
+                 NULL,
+                 OPEN_EXISTING,
+                 FILE_FLAG_NO_BUFFERING,
+                 NULL
+             );
 
-    if (Device != INVALID_HANDLE_VALUE)
-    {
+    if (Device != INVALID_HANDLE_VALUE) {
         CloseHandle(Device);
         SetLastError(ERROR_BUSY);
         PrintLastError(&VolumeName[4]);
         return -1;
     }
 
-    if (CdImage)
-    {
+    if (CdImage) {
         sprintf(DeviceName, DEVICE_NAME_PREFIX "Cd" "%u", DeviceNumber);
-    }
-    else
-    {
+    } else {
         sprintf(DeviceName, DEVICE_NAME_PREFIX "%u", DeviceNumber);
     }
 
     if (!DefineDosDevice(
-        DDD_RAW_TARGET_PATH,
-        &VolumeName[4],
-        DeviceName
-        ))
-    {
+                DDD_RAW_TARGET_PATH,
+                &VolumeName[4],
+                DeviceName
+            )) {
         PrintLastError(&VolumeName[4]);
         return -1;
     }
 
     Device = CreateFile(
-        VolumeName,
-        GENERIC_READ | GENERIC_WRITE,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL,
-        OPEN_EXISTING,
-        FILE_FLAG_NO_BUFFERING,
-        NULL
-        );
+                 VolumeName,
+                 GENERIC_READ | GENERIC_WRITE,
+                 FILE_SHARE_READ | FILE_SHARE_WRITE,
+                 NULL,
+                 OPEN_EXISTING,
+                 FILE_FLAG_NO_BUFFERING,
+                 NULL
+             );
 
-    if (Device == INVALID_HANDLE_VALUE)
-    {
+    if (Device == INVALID_HANDLE_VALUE) {
         PrintLastError(&VolumeName[4]);
         DefineDosDevice(DDD_REMOVE_DEFINITION, &VolumeName[4], NULL);
         return -1;
     }
 
     if (!DeviceIoControl(
-        Device,
-        IOCTL_FILE_DISK_OPEN_FILE,
-        OpenFileInformation,
-        sizeof(OPEN_FILE_INFORMATION) + OpenFileInformation->FileNameLength - 1,
-        NULL,
-        0,
-        &BytesReturned,
-        NULL
-        ))
-    {
+                Device,
+                IOCTL_FILE_DISK_OPEN_FILE,
+                OpenFileInformation,
+                sizeof(OPEN_FILE_INFORMATION) + OpenFileInformation->FileNameLength - 1,
+                NULL,
+                0,
+                &BytesReturned,
+                NULL
+            )) {
         PrintLastError("FileDisk:");
         DefineDosDevice(DDD_REMOVE_DEFINITION, &VolumeName[4], NULL);
         CloseHandle(Device);
@@ -164,8 +154,7 @@ FileDiskMount(
     return 0;
 }
 
-int FileDiskUmount(char DriveLetter)
-{
+int FileDiskUmount(char DriveLetter) {
     char    VolumeName[] = "\\\\.\\ :";
     char    DriveName[] = " :\\";
     HANDLE  Device;
@@ -175,80 +164,75 @@ int FileDiskUmount(char DriveLetter)
     DriveName[0] = DriveLetter;
 
     Device = CreateFile(
-        VolumeName,
-        GENERIC_READ | GENERIC_WRITE,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL,
-        OPEN_EXISTING,
-        FILE_FLAG_NO_BUFFERING,
-        NULL
-        );
+                 VolumeName,
+                 GENERIC_READ | GENERIC_WRITE,
+                 FILE_SHARE_READ | FILE_SHARE_WRITE,
+                 NULL,
+                 OPEN_EXISTING,
+                 FILE_FLAG_NO_BUFFERING,
+                 NULL
+             );
 
-    if (Device == INVALID_HANDLE_VALUE)
-    {
+    if (Device == INVALID_HANDLE_VALUE) {
         PrintLastError(&VolumeName[4]);
         return -1;
     }
 
     if (!DeviceIoControl(
-        Device,
-        FSCTL_LOCK_VOLUME,
-        NULL,
-        0,
-        NULL,
-        0,
-        &BytesReturned,
-        NULL
-        ))
-    {
+                Device,
+                FSCTL_LOCK_VOLUME,
+                NULL,
+                0,
+                NULL,
+                0,
+                &BytesReturned,
+                NULL
+            )) {
         PrintLastError(&VolumeName[4]);
         CloseHandle(Device);
         return -1;
     }
 
     if (!DeviceIoControl(
-        Device,
-        IOCTL_FILE_DISK_CLOSE_FILE,
-        NULL,
-        0,
-        NULL,
-        0,
-        &BytesReturned,
-        NULL
-        ))
-    {
+                Device,
+                IOCTL_FILE_DISK_CLOSE_FILE,
+                NULL,
+                0,
+                NULL,
+                0,
+                &BytesReturned,
+                NULL
+            )) {
         PrintLastError("FileDisk:");
         CloseHandle(Device);
         return -1;
     }
 
     if (!DeviceIoControl(
-        Device,
-        FSCTL_DISMOUNT_VOLUME,
-        NULL,
-        0,
-        NULL,
-        0,
-        &BytesReturned,
-        NULL
-        ))
-    {
+                Device,
+                FSCTL_DISMOUNT_VOLUME,
+                NULL,
+                0,
+                NULL,
+                0,
+                &BytesReturned,
+                NULL
+            )) {
         PrintLastError(&VolumeName[4]);
         CloseHandle(Device);
         return -1;
     }
 
     if (!DeviceIoControl(
-        Device,
-        FSCTL_UNLOCK_VOLUME,
-        NULL,
-        0,
-        NULL,
-        0,
-        &BytesReturned,
-        NULL
-        ))
-    {
+                Device,
+                FSCTL_UNLOCK_VOLUME,
+                NULL,
+                0,
+                NULL,
+                0,
+                &BytesReturned,
+                NULL
+            )) {
         PrintLastError(&VolumeName[4]);
         CloseHandle(Device);
         return -1;
@@ -257,11 +241,10 @@ int FileDiskUmount(char DriveLetter)
     CloseHandle(Device);
 
     if (!DefineDosDevice(
-        DDD_REMOVE_DEFINITION,
-        &VolumeName[4],
-        NULL
-        ))
-    {
+                DDD_REMOVE_DEFINITION,
+                &VolumeName[4],
+                NULL
+            )) {
         PrintLastError(&VolumeName[4]);
         return -1;
     }
@@ -271,8 +254,7 @@ int FileDiskUmount(char DriveLetter)
     return 0;
 }
 
-int FileDiskStatus(char DriveLetter)
-{
+int FileDiskStatus(char DriveLetter) {
     char                    VolumeName[] = "\\\\.\\ :";
     HANDLE                  Device;
     POPEN_FILE_INFORMATION  OpenFileInformation;
@@ -281,47 +263,43 @@ int FileDiskStatus(char DriveLetter)
     VolumeName[4] = DriveLetter;
 
     Device = CreateFile(
-        VolumeName,
-        GENERIC_READ,
-        FILE_SHARE_READ | FILE_SHARE_WRITE,
-        NULL,
-        OPEN_EXISTING,
-        FILE_FLAG_NO_BUFFERING,
-        NULL
-        );
+                 VolumeName,
+                 GENERIC_READ,
+                 FILE_SHARE_READ | FILE_SHARE_WRITE,
+                 NULL,
+                 OPEN_EXISTING,
+                 FILE_FLAG_NO_BUFFERING,
+                 NULL
+             );
 
-    if (Device == INVALID_HANDLE_VALUE)
-    {
+    if (Device == INVALID_HANDLE_VALUE) {
         PrintLastError(&VolumeName[4]);
         return -1;
     }
 
     OpenFileInformation = malloc(sizeof(OPEN_FILE_INFORMATION) + MAX_PATH);
 
-	if (OpenFileInformation == NULL)
-	{
-		return -1;
-	}
+    if (OpenFileInformation == NULL) {
+        return -1;
+    }
 
     if (!DeviceIoControl(
-        Device,
-        IOCTL_FILE_DISK_QUERY_FILE,
-        NULL,
-        0,
-        OpenFileInformation,
-        sizeof(OPEN_FILE_INFORMATION) + MAX_PATH,
-        &BytesReturned,
-        NULL
-        ))
-    {
+                Device,
+                IOCTL_FILE_DISK_QUERY_FILE,
+                NULL,
+                0,
+                OpenFileInformation,
+                sizeof(OPEN_FILE_INFORMATION) + MAX_PATH,
+                &BytesReturned,
+                NULL
+            )) {
         PrintLastError(&VolumeName[4]);
         CloseHandle(Device);
         free(OpenFileInformation);
         return -1;
     }
 
-    if (BytesReturned < sizeof(OPEN_FILE_INFORMATION))
-    {
+    if (BytesReturned < sizeof(OPEN_FILE_INFORMATION)) {
         SetLastError(ERROR_INSUFFICIENT_BUFFER);
         PrintLastError(&VolumeName[4]);
         CloseHandle(Device);
@@ -332,20 +310,19 @@ int FileDiskStatus(char DriveLetter)
     CloseHandle(Device);
 
     printf("%c: %.*s %I64u bytes%s\n",
-        DriveLetter,
-        OpenFileInformation->FileNameLength,
-        OpenFileInformation->FileName,
-        OpenFileInformation->FileSize.QuadPart,
-        OpenFileInformation->ReadOnly ? " ro" : ""
-        );
+           DriveLetter,
+           OpenFileInformation->FileNameLength,
+           OpenFileInformation->FileName,
+           OpenFileInformation->FileSize.QuadPart,
+           OpenFileInformation->ReadOnly ? " ro" : ""
+          );
 
     free(OpenFileInformation);
 
     return 0;
 }
 
-int __cdecl main(int argc, char* argv[])
-{
+int __cdecl main(int argc, char* argv[]) {
     char*                   Command;
     int                     DeviceNumber;
     char*                   FileName;
@@ -356,44 +333,38 @@ int __cdecl main(int argc, char* argv[])
 
     Command = argv[1];
 
-    if ((argc == 5 || argc == 6) && !strcmp(Command, "/mount"))
-    {
+    if ((argc == 5 || argc == 6) && !strcmp(Command, "/mount")) {
         FileName = argv[3];
 
-        if (strlen(FileName) < 2)
-        {
+        if (strlen(FileName) < 2) {
             return FileDiskSyntax();
         }
 
         OpenFileInformation =
             malloc(sizeof(OPEN_FILE_INFORMATION) + strlen(FileName) + 7);
 
-		if (OpenFileInformation == NULL)
-		{
-			return -1;
-		}
+        if (OpenFileInformation == NULL) {
+            return -1;
+        }
 
         memset(
             OpenFileInformation,
             0,
             sizeof(OPEN_FILE_INFORMATION) + strlen(FileName) + 7
-            );
+        );
 
-        if (FileName[0] == '\\')
-        {
+        if (FileName[0] == '\\') {
             if (FileName[1] == '\\')
                 // \\server\share\path\filedisk.img
             {
                 strcpy(OpenFileInformation->FileName, "\\??\\UNC");
                 strcat(OpenFileInformation->FileName, FileName + 1);
-            }
-            else
+            } else
                 // \Device\Harddisk0\Partition1\path\filedisk.img
             {
                 strcpy(OpenFileInformation->FileName, FileName);
             }
-        }
-        else
+        } else
             // c:\path\filedisk.img
         {
             strcpy(OpenFileInformation->FileName, "\\??\\");
@@ -403,63 +374,42 @@ int __cdecl main(int argc, char* argv[])
         OpenFileInformation->FileNameLength =
             (USHORT) strlen(OpenFileInformation->FileName);
 
-        if (argc > 5)
-        {
+        if (argc > 5) {
             Option = argv[4];
             DriveLetter = argv[5][0];
 
-            if (!strcmp(Option, "/ro"))
-            {
+            if (!strcmp(Option, "/ro")) {
                 OpenFileInformation->ReadOnly = TRUE;
-            }
-            else if (!strcmp(Option, "/cd"))
-            {
+            } else if (!strcmp(Option, "/cd")) {
                 CdImage = TRUE;
-            }
-            else
-            {
-                if (Option[strlen(Option) - 1] == 'G')
-                {
+            } else {
+                if (Option[strlen(Option) - 1] == 'G') {
                     OpenFileInformation->FileSize.QuadPart =
                         _atoi64(Option) * 1024 * 1024 * 1024;
-                }
-                else if (Option[strlen(Option) - 1] == 'M')
-                {
+                } else if (Option[strlen(Option) - 1] == 'M') {
                     OpenFileInformation->FileSize.QuadPart =
                         _atoi64(Option) * 1024 * 1024;
-                }
-                else if (Option[strlen(Option) - 1] == 'k')
-                {
+                } else if (Option[strlen(Option) - 1] == 'k') {
                     OpenFileInformation->FileSize.QuadPart =
                         _atoi64(Option) * 1024;
-                }
-                else
-                {
+                } else {
                     OpenFileInformation->FileSize.QuadPart =
                         _atoi64(Option);
                 }
             }
-        }
-        else
-        {
+        } else {
             DriveLetter = argv[4][0];
         }
         OpenFileInformation->DriveLetter = DriveLetter;
         DeviceNumber = atoi(argv[2]);
         return FileDiskMount(DeviceNumber, OpenFileInformation, CdImage);
-    }
-    else if (argc == 3 && !strcmp(Command, "/umount"))
-    {
+    } else if (argc == 3 && !strcmp(Command, "/umount")) {
         DriveLetter = argv[2][0];
         return FileDiskUmount(DriveLetter);
-    }
-    else if (argc == 3 && !strcmp(Command, "/status"))
-    {
+    } else if (argc == 3 && !strcmp(Command, "/status")) {
         DriveLetter = argv[2][0];
         return FileDiskStatus(DriveLetter);
-    }
-    else
-    {
+    } else {
         return FileDiskSyntax();
     }
 }
